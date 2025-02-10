@@ -4,13 +4,13 @@ ResumeAI is a **React Native** application that helps job seekers analyze their 
 
 ---
 
-## 📌 Features
+##  Features
 
 
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Frontend:** React Native (Expo) with React Native Paper
 - **State Management:** Redux Toolkit

@@ -24,6 +24,18 @@ export default function HomeScreen() {
     }
   };
 
+  const handleSubmit = () => {
+    // Handle resume gap analysis logic here 
+
+    if (resumeType === 'upload'){
+        console.log(" upload")
+    }
+    else{
+        console.log("not upload")
+    }
+
+  };
+
   return (
     <View style={styles.container}>
       {/* Sticky Navbar */}
@@ -34,10 +46,10 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Job Description Input */}
-        <Card style={styles.card}>
+        <Card style={[styles.card, styles.jobDescription]}>
           <Text style={styles.label}>📄 Paste Job Description</Text>
           <TextInput
-            style={styles.input}
+            style={styles.jobInput}
             placeholder="Paste the job description here..."
             value={jobDescription}
             onChangeText={setJobDescription}
@@ -46,7 +58,7 @@ export default function HomeScreen() {
         </Card>
 
         {/* Resume Input Selection */}
-        <Card style={styles.card}>
+        <Card style={[styles.card, styles.selection]}>
           <Text style={styles.label}>📌 Select Resume Input Method</Text>
           <RadioButton.Group onValueChange={setResumeType} value={resumeType}>
             <View style={styles.radioRow}>
@@ -62,7 +74,7 @@ export default function HomeScreen() {
 
         {/* Conditional Input: File Upload or Resume Text */}
         {resumeType === "upload" ? (
-          <Card style={styles.card}>
+          <Card style={[styles.card, styles.resumeCard]}>
             <Text style={styles.label}>📂 Upload Resume</Text>
             <Button mode="contained" onPress={handleFileUpload} style={styles.uploadButton}>
               Choose File
@@ -70,10 +82,10 @@ export default function HomeScreen() {
             {selectedFile && <Text style={styles.fileText}>📄 {selectedFile}</Text>}
           </Card>
         ) : (
-          <Card style={styles.card}>
+          <Card style={[styles.card, styles.inputResumeCard]}>
             <Text style={styles.label}>✍️ Paste Your Resume</Text>
             <TextInput
-              style={styles.input}
+              style={styles.inputResume}
               placeholder="Paste your resume details here..."
               value={resumeText}
               onChangeText={setResumeText}
@@ -83,7 +95,7 @@ export default function HomeScreen() {
         )}
 
         {/* Button: Find Resume Gap (No functionality yet) */}
-        <Button mode="contained" style={styles.analyzeButton} onPress={() => console.log("Resume Gap Analysis Clicked")}>
+        <Button mode="contained" style={styles.analyzeButton} onPress={() => handleSubmit()}>
           Find Resume Gap
         </Button>
       </ScrollView>
@@ -98,12 +110,18 @@ const styles = StyleSheet.create({
   content: { padding: 20, alignItems: "stretch" },
   card: { padding: 15, marginBottom: 15, backgroundColor: "white", borderRadius: 10, elevation: 2 },
   label: { fontSize: 16, fontWeight: "bold", marginBottom: 10 },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 5, padding: 10, backgroundColor: "white", height: 80 },
+  jobInput: { borderWidth: 1, borderColor: "#ccc", borderRadius: 5, padding: 10, backgroundColor: "white", height: "80%" },
   radioRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   uploadButton: { marginTop: 10, backgroundColor: "#6200EE" },
   fileText: { marginTop: 5, fontSize: 14, fontStyle: "italic", color: "#666" },
   analyzeButton: { marginTop: 20, backgroundColor: "#6200EE", padding: 10 },
   logo: { width: 40, height: 40, resizeMode: "contain" },  
+  jobDescription: {height:"40%"},
+  selection: {height:"30%"},
+  resumeCard: {height:"30%"},
+  inputResumeCard: {height:"50%"},
+  inputResume: {borderWidth: 1, borderColor: "#ccc", borderRadius: 5, padding: 10, backgroundColor: "white", height: "80%"},
+
 
 });
 
