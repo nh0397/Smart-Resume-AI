@@ -18,6 +18,7 @@ export default function HomeScreen() {
   const [resumeType, setResumeType] = useState("upload");
   const [selectedFile, setSelectedFile] = useState(null);
   const [resumeText, setResumeText] = useState("");
+  const [extractionMessage, setExtractionMessage] = useState("");
 
   // Handle File Upload
   const handleFileUpload = async () => {
@@ -47,41 +48,6 @@ export default function HomeScreen() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!jobDescription.trim()) {
-      alert("Please enter a job description.");
-      return;
-    }
-
-    let resumeContent = resumeText;
-
-    if (resumeType === "upload" && selectedFile) {
-      alert("Resume file processing is not yet implemented."); // Placeholder
-      return;
-    }
-
-    try {
-      const response = await fetch(`${CONFIG.API_BASE_URL}/match`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          job_description: jobDescription,
-          resume_text: resumeContent,
-        }),
-      });
-
-      const data = await response.json();
-      console.log("Match Percentage:", data.match_percentage);
-      console.log("Missing Keywords:", data.missing_keywords);
-      alert(
-        `Match: ${data.match_percentage}%\nMissing Keywords: ${data.missing_keywords.join(", ")}`
-      );
-    } catch (error) {
-      console.error("Error analyzing resume:", error);
-      alert("Failed to analyze resume. Please try again.");
-    }
-  };
-
   const sendFileToBackend = async (fileBase64, filename) => {
     try {
       const response = await fetch(`${CONFIG.API_BASE_URL}/extract-text`, {
@@ -93,10 +59,41 @@ export default function HomeScreen() {
       const data = await response.json();
       console.log("Extracted Resume Text:", data.text);
       setResumeText(data.text); // Populate text area with extracted text
+
+      // Show success message
+      setExtractionMessage("📄 PDF/Word Data Extracted!");
+      setTimeout(() => setExtractionMessage(""), 3000); // Hide after 3 seconds
     } catch (error) {
       console.error("Error sending file:", error);
     }
   };
+
+  const analyzeResumeGap = async () => {
+    if (!jobDescription.trim() || !resumeText.trim()) {
+      alert("Please enter both job description and resume.");
+      return;
+    }
+  
+    try {
+      const response = await fetch(`${CONFIG.API_BASE_URL}/resume-gap-analysis`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          job_description: jobDescription,
+          resume_text: resumeText,
+        }),
+      });
+  
+      const data = await response.json();
+      console.log("Resume Gap Analysis:", data);
+      alert(`📝 Missing Skills:\n${data.missing_skills}`);
+    } catch (error) {
+      console.error("Error analyzing resume gap:", error);
+      alert("Failed to analyze resume gap. Please try again.");
+    }
+  };
+  
+
 
   return (
     <View style={styles.container}>
@@ -140,10 +137,19 @@ export default function HomeScreen() {
         {resumeType === "upload" ? (
           <Card style={[styles.card, styles.resumeCard]}>
             <Text style={styles.label}>📂 Upload Resume</Text>
-            <Button mode="contained" onPress={handleFileUpload} style={styles.uploadButton}>
+            <Button
+              mode="contained"
+              onPress={handleFileUpload}
+              style={styles.uploadButton}
+            >
               Choose File
             </Button>
-            {selectedFile && <Text style={styles.fileText}>📄 {selectedFile}</Text>}
+            {selectedFile && (
+              <Text style={styles.fileText}>📄 {selectedFile}</Text>
+            )}
+            {extractionMessage ? (
+              <Text style={styles.successMessage}>{extractionMessage}</Text>
+            ) : null}
           </Card>
         ) : (
           <Card style={[styles.card, styles.inputResumeCard]}>
@@ -161,7 +167,11 @@ export default function HomeScreen() {
         )}
 
         {/* Button: Find Resume Gap */}
-        <Button mode="contained" style={styles.analyzeButton} onPress={handleSubmit}>
+        <Button
+          mode="contained"
+          style={styles.analyzeButton}
+          onPress={analyzeResumeGap}
+        >
           Find Resume Gap
         </Button>
       </View>
@@ -218,5 +228,12 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     minHeight: 50,
     maxHeight: 150, // Ensures proper scrolling inside
+  },
+  successMessage: {
+    marginTop: 7,
+    color: "green",
+    fontSize: 14,
+    fontWeight: "bold",
+    textAlign: "left",
   },
 });
