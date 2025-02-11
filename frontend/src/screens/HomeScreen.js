@@ -3,6 +3,8 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Image 
 import { RadioButton, Button, Appbar, Card } from "react-native-paper";
 import * as DocumentPicker from "expo-document-picker";
 import logo from "../../assets/cv.png"
+import CONFIG from "../config"
+
 
 export default function HomeScreen() {
   const [jobDescription, setJobDescription] = useState("");  
@@ -24,17 +26,39 @@ export default function HomeScreen() {
     }
   };
 
-  const handleSubmit = () => {
-    // Handle resume gap analysis logic here 
-
-    if (resumeType === 'upload'){
-        console.log(" upload")
+  const handleSubmit = async () => {
+    if (!jobDescription.trim()) {
+      alert("Please enter a job description.");
+      return;
     }
-    else{
-        console.log("not upload")
+  
+    let resumeContent = resumeText;
+  
+    if (resumeType === "upload" && selectedFile) {
+      alert("Resume file processing is not yet implemented."); // Placeholder
+      return;
     }
-
+  
+    try {
+      const response = await fetch(`${CONFIG.API_BASE_URL}/match`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          job_description: jobDescription,
+          resume_text: resumeContent,
+        }),
+      });
+  
+      const data = await response.json();
+      console.log("Match Percentage:", data.match_percentage);
+      console.log("Missing Keywords:", data.missing_keywords);
+      alert(`Match: ${data.match_percentage}%\nMissing Keywords: ${data.missing_keywords.join(", ")}`);
+    } catch (error) {
+      console.error("Error analyzing resume:", error);
+      alert("Failed to analyze resume. Please try again.");
+    }
   };
+  
 
   return (
     <View style={styles.container}>
