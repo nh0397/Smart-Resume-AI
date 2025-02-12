@@ -13,7 +13,7 @@ from docx import Document
 import google.generativeai as genai
 from dotenv import load_dotenv
 
-# ✅ Load API Key
+#  Load API Key
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
@@ -21,15 +21,15 @@ genai.configure(api_key=GEMINI_API_KEY)
 app = Flask(__name__)
 CORS(app)
 
-### ✅ 1. Resume Text Extraction (OCR + PDF/Word Processing)
+###  1. Resume Text Extraction (OCR + PDF/Word Processing)
 def extract_text_from_pdf(pdf_bytes):
     """Extract text from a PDF (OCR if necessary)."""
     try:
         text = pdfminer.high_level.extract_text(io.BytesIO(pdf_bytes))
         if text.strip():
-            return text  # ✅ Return extracted text if available
+            return text  #  Return extracted text if available
 
-        # ✅ If no text found, use OCR
+        #  If no text found, use OCR
         images = convert_from_bytes(pdf_bytes)
         text = " ".join(pytesseract.image_to_string(img) for img in images)
         return text
@@ -71,7 +71,7 @@ def extract_text():
         return jsonify({"error": "Internal Server Error"}), 500
 
 
-### ✅ 2. Skill Extraction Using Gemini (Fixes JSON Issues)
+###  2. Skill Extraction Using Gemini (Fixes JSON Issues)
 def extract_skills(text, content_type):
     """Extracts key skills from text using Gemini AI."""
     model = genai.GenerativeModel("gemini-1.5-flash")
@@ -87,30 +87,32 @@ def extract_skills(text, content_type):
     """)
 
     raw_response = response.text.strip()
-    print("Raw Gemini Response:", repr(raw_response))  # ✅ Debugging Log
+    print("Raw Gemini Response:", repr(raw_response))  #  Debugging Log
 
     try:
-        # ✅ Remove Markdown-style triple backticks if present
+        #  Remove Markdown-style triple backticks if present
         cleaned_json = re.sub(r"```json\n|\n```", "", raw_response).strip()
 
-        # ✅ Ensure response is a valid JSON string
+        #  Ensure response is a valid JSON string
         skills_data = json.loads(cleaned_json)
 
-        # ✅ Extract the list of skills
+        #  Extract the list of skills
         return skills_data.get("skills", [])
 
     except json.JSONDecodeError as e:
         print(f"JSON Parsing Error in extract_skills: {e}")
-        print("Cleaned Gemini Response:", repr(cleaned_json))  # ✅ Debugging Log
+        print("Cleaned Gemini Response:", repr(cleaned_json))  #  Debugging Log
         return []
 
 
-### ✅ 3. Smart Skill Matching Using Gemini
+###  3. Smart Skill Matching Using Gemini
 def compare_skills(job_skills, resume_skills):
     """Uses Gemini to match skills intelligently, handling synonyms."""
     model = genai.GenerativeModel("gemini-1.5-flash")
     response = model.generate_content(f"""
         Given these job skills and resume skills, determine matching and missing skills.
+        Be very smart. Match the Acronyms if there are present. Even the shorthands if they are present.
+        Make sure you check all possible ways to match the various skills.  
         Ensure the output is a valid JSON formatted as:
         {{
           "matching_skills": ["skill1", "skill2"],
@@ -123,21 +125,23 @@ def compare_skills(job_skills, resume_skills):
     """)
 
     raw_response = response.text.strip()
-    print("Raw Match Data from Gemini:", repr(raw_response))  # ✅ Debugging Log
+    print("Raw Match Data from Gemini:", repr(raw_response))  #  Debugging Log
 
     try:
-        # ✅ Remove Markdown-style triple backticks if present
+        #  Remove Markdown-style triple backticks if present
         cleaned_json = re.sub(r"```json\n|\n```", "", raw_response).strip()
 
-        # ✅ Parse the cleaned JSON
+        #  Parse the cleaned JSON
         match_data = json.loads(cleaned_json)
         return match_data
 
     except json.JSONDecodeError as e:
         print(f"JSON Parsing Error in compare_skills: {e}")
-        print("Cleaned Gemini Response:", repr(cleaned_json))  # ✅ Debugging Log
+        print("Cleaned Gemini Response:", repr(cleaned_json))  #  Debugging Log
         return {"matching_skills": [], "missing_skills": [], "match_percentage": 0}
-### ✅ 4. Resume Gap Analysis Endpoint
+    
+
+###  4. Resume Gap Analysis Endpoint
 @app.route("/resume-gap-analysis", methods=["POST"])
 def resume_gap_analysis():
     """Analyzes resume gaps by comparing extracted skills from job description & resume."""
@@ -149,26 +153,30 @@ def resume_gap_analysis():
         return jsonify({"error": "Job description and resume text are required"}), 400
 
     try:
-        # ✅ Extract skills from job description & resume
+        #  Extract skills from job description & resume
         job_skills = extract_skills(job_description, "job description")
-        print("Job Skills Extracted:", job_skills)  # ✅ Debugging Log
         resume_skills = extract_skills(resume_text, "resume")
-        print("Resume Skills Extracted:", resume_skills)  # ✅ Debugging Log
 
-        # ✅ Compare skills using Gemini
+        #  Compare skills using Gemini
         match_data = compare_skills(job_skills, resume_skills)
-        print("Match Data from Gemini:", match_data)  # ✅ Debugging Log
 
-        # ✅ Generate project suggestions for missing skills
+        #  Generate structured project suggestions with **ONLY bullet points**
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(
             f"""
             Suggest practical projects (2-3 days) to gain experience in these skills:
             {", ".join(match_data.get("missing_skills", []))}
 
-            Format as a bullet list.
+            Return the response in simple bullet points only. No fancy formatting, no bold text, no special characters other than `-` for bullet points.
+
+            Example:
+            - Build a REST API: Develop a RESTful API using Flask and deploy it to AWS.
+            - Create a Frontend Dashboard: Build a React.js dashboard for displaying analytics.
+
+            {", ".join(match_data.get("missing_skills", []))}
             """
         )
+
         project_suggestions = response.text.strip().split("\n")
 
         return jsonify(
@@ -182,7 +190,6 @@ def resume_gap_analysis():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
