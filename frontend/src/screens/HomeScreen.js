@@ -6,19 +6,23 @@ import {
   StyleSheet,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { RadioButton, Button, Appbar, Card } from "react-native-paper";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
+import { useNavigation } from "@react-navigation/native";
 import logo from "../../assets/cv.png";
 import CONFIG from "../config";
 
 export default function HomeScreen() {
+  const navigation = useNavigation();
   const [jobDescription, setJobDescription] = useState("");
   const [resumeType, setResumeType] = useState("upload");
   const [selectedFile, setSelectedFile] = useState(null);
   const [resumeText, setResumeText] = useState("");
   const [extractionMessage, setExtractionMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   // Handle File Upload
   const handleFileUpload = async () => {
@@ -50,30 +54,39 @@ export default function HomeScreen() {
 
   const sendFileToBackend = async (fileBase64, filename) => {
     try {
+      console.log("Sending file to backend...");
+  
       const response = await fetch(`${CONFIG.API_BASE_URL}/extract-text`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_name: filename, file_data: fileBase64 }),
       });
-
-      const data = await response.json();
+  
+      const responseText = await response.text();
+      console.log("Raw API Response (Extract Text):", responseText);
+  
+      const data = JSON.parse(responseText);
       console.log("Extracted Resume Text:", data.text);
-      setResumeText(data.text); // Populate text area with extracted text
-
-      // Show success message
+  
+      setResumeText(data.text);
       setExtractionMessage("📄 PDF/Word Data Extracted!");
-      setTimeout(() => setExtractionMessage(""), 3000); // Hide after 3 seconds
+      setTimeout(() => setExtractionMessage(""), 3000);
+  
     } catch (error) {
       console.error("Error sending file:", error);
+      alert("Failed to extract text. Check API logs.");
     }
   };
-
+  
   const analyzeResumeGap = async () => {
     if (!jobDescription.trim() || !resumeText.trim()) {
       alert("Please enter both job description and resume.");
       return;
     }
+    setLoading(true);
   
+    console.log("Sending Resume Gap Analysis Request...");
+    
     try {
       const response = await fetch(`${CONFIG.API_BASE_URL}/resume-gap-analysis`, {
         method: "POST",
@@ -84,16 +97,28 @@ export default function HomeScreen() {
         }),
       });
   
-      const data = await response.json();
-      console.log("Resume Gap Analysis:", data);
-      alert(`📝 Missing Skills:\n${data.missing_skills}`);
+      const responseText = await response.text();
+      console.log("Raw API Response (Resume Gap Analysis):", responseText);
+  
+      const data = JSON.parse(responseText);
+      console.log("Match Data:", data);
+  
+      navigation.navigate("ResultsScreen", {
+        matchPercentage: data.match_percentage || 0,
+        matchingSkills: data.matching_skills || [],
+        missingSkills: data.missing_skills || [],
+        projectSuggestions: data.project_suggestions || [],
+      });
+
+      setLoading(false);
+  
     } catch (error) {
       console.error("Error analyzing resume gap:", error);
-      alert("Failed to analyze resume gap. Please try again.");
+      alert("Failed to analyze resume gap. Please check API logs.");
     }
   };
   
-
+  
 
   return (
     <View style={styles.container}>
@@ -137,19 +162,11 @@ export default function HomeScreen() {
         {resumeType === "upload" ? (
           <Card style={[styles.card, styles.resumeCard]}>
             <Text style={styles.label}>📂 Upload Resume</Text>
-            <Button
-              mode="contained"
-              onPress={handleFileUpload}
-              style={styles.uploadButton}
-            >
+            <Button mode="contained" onPress={handleFileUpload} style={styles.uploadButton}>
               Choose File
             </Button>
-            {selectedFile && (
-              <Text style={styles.fileText}>📄 {selectedFile}</Text>
-            )}
-            {extractionMessage ? (
-              <Text style={styles.successMessage}>{extractionMessage}</Text>
-            ) : null}
+            {selectedFile && <Text style={styles.fileText}>📄 {selectedFile}</Text>}
+            {extractionMessage ? <Text style={styles.successMessage}>{extractionMessage}</Text> : null}
           </Card>
         ) : (
           <Card style={[styles.card, styles.inputResumeCard]}>
@@ -166,14 +183,14 @@ export default function HomeScreen() {
           </Card>
         )}
 
-        {/* Button: Find Resume Gap */}
-        <Button
-          mode="contained"
-          style={styles.analyzeButton}
-          onPress={analyzeResumeGap}
-        >
-          Find Resume Gap
-        </Button>
+        {/* Button or Loader */}
+        {loading ? (
+          <ActivityIndicator size="large" color="#6200EE" style={styles.loader} />
+        ) : (
+          <Button mode="contained" style={styles.analyzeButton} onPress={analyzeResumeGap}>
+            Find Resume Gap
+          </Button>
+        )}
       </View>
     </View>
   );
@@ -198,9 +215,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   label: { fontSize: 16, fontWeight: "bold", marginBottom: 10 },
-  scrollContainer: {
-    maxHeight: 150, // Ensures text does not expand indefinitely
-  },
+  scrollContainer: { maxHeight: 150 },
   jobInput: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -208,32 +223,14 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: "white",
     minHeight: 50,
-    maxHeight: 150, // Prevents the input from growing too much
+    maxHeight: 150,
   },
   radioRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   uploadButton: { marginTop: 10, backgroundColor: "#6200EE" },
   fileText: { marginTop: 5, fontSize: 14, fontStyle: "italic", color: "#666" },
-  analyzeButton: {
-    backgroundColor: "#6200EE",
-    padding: 10,
-    marginTop: 10,
-    alignSelf: "center",
-  },
+  analyzeButton: { backgroundColor: "#6200EE", padding: 10, marginTop: 10, alignSelf: "center" },
+  loader: { marginTop: 20 },
   logo: { width: 40, height: 40, resizeMode: "contain" },
-  inputResume: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    padding: 10,
-    backgroundColor: "white",
-    minHeight: 50,
-    maxHeight: 150, // Ensures proper scrolling inside
-  },
-  successMessage: {
-    marginTop: 7,
-    color: "green",
-    fontSize: 14,
-    fontWeight: "bold",
-    textAlign: "left",
-  },
+  inputResume: { borderWidth: 1, borderColor: "#ccc", borderRadius: 5, padding: 10, backgroundColor: "white", minHeight: 50, maxHeight: 150 },
+  successMessage: { marginTop: 7, color: "green", fontSize: 14, fontWeight: "bold", textAlign: "left" },
 });
