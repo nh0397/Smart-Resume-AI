@@ -344,21 +344,6 @@ This project is licensed under the **Apache License 2.0** - see the [LICENSE](LI
 
 ---
 
-## Repository History
-
-This unified repository combines the complete development history of two originally separate projects:
-
-### Original Development
-- **Frontend Repository**: [Resume-Gap-Analysis](https://github.com/nh0397/Resume-Gap-Analysis)
-- **Backend Repository**: [Resume-Gap-Analysis-Backend](https://github.com/nh0397/Resume-Gap-Analysis-Backend)
-
-### Complete Commit History Preserved
-- **Frontend Development**: 9 commits showing React Native app evolution
-- **Backend Development**: 5 commits documenting Flask API development
-- **Unified Repository**: 4 commits for integration and documentation
-
----
-
 ## Support & Contact
 
 ### Getting Help
